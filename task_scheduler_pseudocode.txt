@@ -1,0 +1,176 @@
+```
+// Command-line tool to schedule and run network diagnostic tasks
+// Input: File path to task list, mode flag (--validate or --run)
+// Output: Validation results or execution results with runtime comparison
+
+// Define a Task structure
+Task:
+    name: string
+    duration: integer
+    dependencies: list of strings
+    task_type: string (resolve, traceroute, iperf3)
+    parameters: map of string to string (e.g., {"endpoint": "dal.speedtest.clouvider.net", "count": "10"})
+
+// Parse input file into list of Tasks
+Function parse_input(file_path):
+    tasks = empty list
+    Open file_path
+    For each line:
+        Split line by commas into [name, duration, deps, task_type, params]
+        Validate:
+            - name is non-empty, unique
+            - duration is positive integer
+            - deps is empty or semicolon-separated list of valid task names
+            - task_type is one of ["resolve", "traceroute", "iperf3"]
+            - params is semicolon-separated key=value pairs
+        If invalid, return error message
+        Parse params into map (split by ";", then split each by "=")
+        Parse deps into list (split by ";" or empty)
+        Add Task(name, duration, deps, task_type, params) to tasks
+    Return tasks
+
+// Check for dependency cycles using DFS
+Function detect_cycles(tasks):
+    visited = empty set
+    rec_stack = empty set
+    For each task in tasks:
+        If task not in visited:
+            If dfs_cycle(task, visited, rec_stack, tasks):
+                Return error "Cycle detected"
+    Return success
+
+Function dfs_cycle(task, visited, rec_stack, tasks):
+    Add task.name to visited and rec_stack
+    For each dep in task.dependencies:
+        If dep not in visited:
+            If dfs_cycle(find_task(dep, tasks), visited, rec_stack, tasks):
+                Return true
+        Else if dep in rec_stack:
+            Return true
+    Remove task.name from rec_stack
+    Return false
+
+// Calculate expected total runtime (critical path)
+Function calculate_expected_runtime(tasks):
+    start_times = map of task.name to earliest start time (init to 0)
+    finish_times = map of task.name to finish time (init to 0)
+    For each task in tasks:
+        max_dep_finish = 0
+        For each dep in task.dependencies:
+            max_dep_finish = max(max_dep_finish, finish_times[dep])
+        start_times[task.name] = max_dep_finish
+        finish_times[task.name] = max_dep_finish + task.duration
+    Return max(finish_times.values)
+
+// Build command from task
+Function build_command(task):
+    If task.task_type == "resolve":
+        Return "dig " + task.parameters["fqdn"]
+    If task.task_type == "traceroute":
+        If task.parameters["tool"] == "mtr":
+            Return "mtr -c " + task.parameters["count"] + " " + task.parameters["endpoint"]
+        Else:
+            Return "traceroute -q " + task.parameters["count"] + " " + task.parameters["endpoint"]
+    If task.task_type == "iperf3":
+        Return "iperf3 -c " + task.parameters["endpoint"] + 
+               " -p " + task.parameters["port"] + 
+               " -t " + task.parameters["duration"] + 
+               " " + (if task.parameters["mode"] == "client" then "" else "-s")
+
+// Execute a task and return success/failure, output, and duration
+Function execute_task(task):
+    command = build_command(task)
+    start_time = current_time()
+    result = run_system_command(command) // e.g., subprocess.run in Python
+    end_time = current_time()
+    actual_duration = end_time - start_time
+    If result.success:
+        Return true, result.output, actual_duration
+    Else:
+        Return false, result.error, actual_duration
+
+// Validation mode
+Function validate_mode(file_path):
+    tasks = parse_input(file_path)
+    If parse failed:
+        Print "Invalid input: " + error_message
+        Return
+    If detect_cycles(tasks) failed:
+        Print "Invalid input: Dependency cycle detected"
+        Return
+    expected_runtime = calculate_expected_runtime(tasks)
+    Print "Input valid. Expected total runtime: " + expected_runtime + " seconds"
+
+// Execution mode with parallelism
+Function run_mode(file_path):
+    tasks = parse_input(file_path)
+    If parse failed:
+        Print "Invalid input: " + error_message
+        Return
+    If detect_cycles(tasks) failed:
+        Print "Invalid input: Dependency cycle detected"
+        Return
+    expected_runtime = calculate_expected_runtime(tasks)
+    
+    // Track task states
+    completed = empty set
+    running = empty set
+    start_times = empty map
+    actual_durations = empty map
+    outputs = empty map
+    global_start = current_time()
+    
+    // Thread pool for parallelism
+    thread_pool = initialize_thread_pool()
+    
+    While not all tasks in completed:
+        For each task in tasks:
+            If task not in completed and task not in running:
+                If all task.dependencies in completed:
+                    // Start task in a thread
+                    thread_pool.submit(async_execute_task(task))
+                    running.add(task.name)
+                    start_times[task.name] = current_time()
+        
+        // Check for completed threads
+        For each thread in thread_pool:
+            If thread.finished:
+                task_name, success, output, duration = thread.result
+                running.remove(task_name)
+                completed.add(task_name)
+                actual_durations[task_name] = duration
+                outputs[task_name] = output
+                Print "Finished " + task_name + " at " + current_time() + "s"
+                If not success:
+                    Print "Error in " + task_name + ": " + output
+                    // Skip dependent tasks
+                    For each t in tasks:
+                        If task_name in t.dependencies:
+                            completed.add(t.name)
+    
+    global_end = current_time()
+    actual_runtime = global_end - global_start
+    
+    // Print results
+    For each task in tasks:
+        Print "Task " + task.name + ": Output = " + outputs[task.name]
+    Print "Actual runtime: " + actual_runtime + " seconds"
+    Print "Difference from expected: " + (actual_runtime - expected_runtime) + " seconds"
+
+// Async task execution for threading
+Function async_execute_task(task):
+    Print "Starting " + task.name + " at " + current_time() + "s"
+    success, output, duration = execute_task(task)
+    Return task.name, success, output, duration
+
+// Main function
+Function main():
+    Parse command-line args: file_path, mode (--validate or --run)
+    If mode == "--validate":
+        validate_mode(file_path)
+    Else if mode == "--run":
+        run_mode(file_path)
+    Else:
+        Print "Invalid mode. Use --validate or --run"
+
+```
