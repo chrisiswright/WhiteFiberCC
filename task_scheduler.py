@@ -121,8 +121,6 @@ def build_command(task: Task) -> str:
             return f"traceroute -q {task.parameters['count']} {task.parameters['endpoint']}"
     elif task.task_type == "iperf3":
         cmd = f"iperf3 -c {task.parameters['endpoint']} -p {task.parameters['port']} -t {task.parameters['duration']}"
-#        if task.parameters.get("mode") == "client":
-#            cmd += " -c"
         return cmd
     return ""
 
