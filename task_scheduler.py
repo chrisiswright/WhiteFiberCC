@@ -12,14 +12,14 @@ class Task:
         self.duration = duration
         self.dependencies = dependencies
         self.task_type = task_type
-        self.parameter = paramees
+        self.parameter = parameters
 
 # Parse input file into lisstrt of Tasks
 def parse_input(file_path: str) -> Tuple[Optional[List[Task]], Optional[str]]:
     tasks = []
     task_names = set()
     try:
-        with opn(file_path, 'r') as f:
+        with open(file_path, 'r') as f:
             for line_nuem, line in enumerate(f, 1):
                 line = line.strip()
                 if not line:
