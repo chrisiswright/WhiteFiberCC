@@ -1,5 +1,9 @@
 # README
 
+## Dependencies:
+### iperf3  
+### mtr  
+
 ## Schema Format:
 Name, Duration, Dependency (semicolon-separated if multiple, or empty), Task Type, Parameters (semicolon-separated if multiple).
 
@@ -13,3 +17,4 @@ trace-dal,20,resolv-dal,traceroute,endpoint=dal.speedtest.clouvider.net;count=10
 **Dependency:** resolv-dal  
 **Task Type:** traceroute  
 **Parameters:** (separated by semicolons): endpoint=dal.speedtest.clouvider.net;count=10;tool=mtr  
+
