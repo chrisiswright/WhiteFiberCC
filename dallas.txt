@@ -1,4 +1,4 @@
 resolv-dal,1,,resolve,fqdn=dal.speedtest.clouvider.net
 trace-dal,20,resolv-dal,traceroute,endpoint=dal.speedtest.clouvider.net;count=10;tool=mtr
-perf-dal,10,trace-dal,iperf3,endpoint=dal.speedtest.clouvider.net;port=5201;duration=10;mode=client
+perf-dal,10,trace-dal,iperf3,endpoint=dal.speedtest.clouvider.net;port=5201;duration=10
 trace_under_load-dal,20,resolv-dal,traceroute,endpoint=dal.speedtest.clouvider.net;count=10;tool=mtr
