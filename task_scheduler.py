@@ -116,11 +116,11 @@ def build_command(task: Task) -> str:
         return f"dig +short {task.parameters['fqdn']}"
     elif task.task_type == "traceroute":
         if task.parameters.get("tool") == "mtr":
-            return f"mtr -c {task.parameters['count']} {task.parameters['endpoint']} --report"
+            return f"mtr -nz -c {task.parameters['count']} {task.parameters['endpoint']} --report"
         else:
             return f"traceroute -q {task.parameters['count']} {task.parameters['endpoint']}"
     elif task.task_type == "iperf3":
-        cmd = f"iperf3 -nz -c {task.parameters['endpoint']} -p {task.parameters['port']} -t {task.parameters['duration']}"
+        cmd = f"iperf3 -c {task.parameters['endpoint']} -p {task.parameters['port']} -t {task.parameters['duration']}"
         return cmd
     return ""
 
