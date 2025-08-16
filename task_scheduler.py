@@ -12,7 +12,7 @@ class Task:
         self.duration = duration
         self.dependencies = dependencies
         self.task_type = task_type
-        self.parameter = parameters
+        self.parameters = parameters
 
 # Parse input file into lisstrt of Tasks
 def parse_input(file_path: str) -> Tuple[Optional[List[Task]], Optional[str]]:
